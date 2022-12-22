@@ -1,0 +1,36 @@
+Instructions:
+
+
+| Instruction              | 15 | 14 | 13 | 12 | 11 | 10 | 09 | 08 | 07 | 06 | 05 | 04 | 03 | 02 | 01 | 00 |
+                             OOOW SS
+   Halt                    | 0000 0000 0000 0000
+   Load Byte               | 0010 0000 BBBB BBBB
+   Load Word               | 0011 0000 0000 0000 WWWW WWWW WWWW WWWW
+   Load Memory             | 0011 0100 AAAA AAAA AAAA AAAA AAAA AAAA
+   Load Register           | 0010 10RR 0000 0000
+   Load Register Indirect  | 0010 11RR PPPP PPPP /* Encode page in byte 2, register is offset. */ LDA ($PPPP_PPPP),<RR>
+   Store Memory            | 0101 0100 AAAA AAAA AAAA AAAA AAAA AAAA
+   Store Register          | 0100 10RR 0000 0000
+   Store Register Indirect | 0100 11RR PPPP PPPP /* Encode page in byte 2, register is offset. */ STA ($PPPP_PPPP),<RR>
+   Alu Word                | 0111 OOOO 00        WWWW WWWW WWWW WWWW
+   Alu Register            | 0110 OOOO 10RR
+   SHL Nibble              | 0110 1000 0000 NNNN
+   SHR Nibble              | 0110 1001 0000 NNNN
+   SHL Register            | 0110 1000 1RR0 0000
+   SHR Register            | 0110 1001 1RR0 0000
+   Pop Acc                 | 1000 0000 0000 0000 
+   Pop Register            | 1000 01RR 0000 0000
+   Push Acc                | 1010 0000 0000 0000
+   Push Register           | 1010 01RR 0000 0000
+   Push Byte               | 1010 1000 BBBB BBBB
+   Push Word               | 1011 1100 0000 0000 WWWW WWWW WWWW WWWW
+   Jump                    | 1101 0000 AAAA AAAA AAAA AAAA AAAA AAAA
+   Call                    | 1101 1000 AAAA AAAA AAAA AAAA AAAA AAAA
+   Return                  | 1100 1000 0000 0000
+   Branch Flag             | 1101 0FFF AAAA AAAA AAAA AAAA AAAA AAAA
+   Branch Not Flag         | 1101 1FFF AAAA AAAA AAAA AAAA AAAA AAAA
+   Compare Byte            | 1110 0000 BBBB BBBB
+   Compare Word            | 1111 0000 0000 0000 WWWW WWWW WWWW WWWW
+   Compare Memory          | 1111 01   AAAA AAAA AAAA AAAA AAAA AAAA
+   Compare Register        | 1110 10RR 0000 0000
+   Compare Register Ind.   | 1110 11RR PPPP PPPP
