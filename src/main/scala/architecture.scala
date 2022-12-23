@@ -1,41 +1,42 @@
 package cp420
 
 opaque type Bus      = Int  /* 24 bit. */
-opaque type Word     = Short
+opaque type Word     = Int
 opaque type Address  = Int  /* 24 bit. */
 opaque type Memory   = IArray[Word]
 
 extension (sc: StringContext)
   /* Only until FromDigits get included. */
   def b(args: Any*): Word =
-    Integer.parseInt(sc.s(args*), 2).toShort
+    val image = sc.s(args*).replaceAllLiterally(" ", "")
+    Integer.parseInt(image, 2)
 
 object Word:
   extension (data: Word)
-    def <  (other: Word): Boolean = data < other
-    def >  (other: Word): Boolean = data > other
-    def +  (other: Word): Int     = data + other
-    def -  (other: Word): Int     = data - other
-    def *  (other: Word): Int     = data * other
-    def /  (other: Word): Int     = data / other
-    def %  (other: Word): Int     = data % other
-    def &  (other: Word): Int     = data & other
-    def |  (other: Word): Int     = data | other
-    def ^  (other: Word): Int     = data ^ other
-    def << (other: Word): Int     = data << other
-    def >> (other: Word): Int     = data >> other
+    def <  (other: Word): Boolean  = data < other
+    def >  (other: Word): Boolean  = data > other
+    def +  (other: Word): Int      = data + other
+    def -  (other: Word): Int      = data - other
+    def *  (other: Word): Int      = data * other
+    def /  (other: Word): Int      = data / other
+    def %  (other: Word): Int      = data % other
+    def &  (other: Word): Int      = data & other
+    def |  (other: Word): Int      = data | other
+    def ^  (other: Word): Int      = data ^ other
+    def << (other: Word): Int      = data << other
+    def >> (other: Word): Int      = data >>> other
     def unary_~ : Int = ~data
     def asInt: Int = data
-    def lowerByte: Byte = (data & 0xFF).toByte
+    def lowerByte: Word = (data & 0x00FF)
     def unmask(mask: Word, shift: Int): Int =
-      data & mask >> shift
+      (data & mask.asInt) >>> shift
     def toString = f"${data.toInt}%04X"
   
   def upper(x: Int): Word = 
-    (x >> 16 & 0xFFFF).toShort
+    (x >>> 16 & 0xFFFF)
 
   def mask(x: Int): Word =
-    (x & 0xFFFF).toShort
+    (x & 0xFFFF)
 
   inline def bit(inline n: Int): Word =
     mask(1 << n)
@@ -50,15 +51,15 @@ object Address:
     def previous: Address = a - 1
     def toString = f"$a%06X"
     def offset: Word = Word.mask(a & 0xFFFF)
-    def page: Word = Word.mask((a >> 16) & 0xFF)
+    def page: Word = Word.mask((a >>> 16) & 0xFF)
 
   def mask(image: Int): Address =
     image & 0x00FF_FFFF
 
   def fromWord(w: Word): Address = w
 
-  def computeEffective(page: Byte, offset: Word): Address =
-    page.toInt << 16 | offset
+  def computeEffective(page: Word, offset: Word): Address =
+    page << 16 | offset
 
 object Bus:
   extension (bus: Bus)
@@ -110,7 +111,7 @@ object Flags:
       setFlag(flags, flag)
 
   def isFlagSet(flags: Flags, flag: Flag) =
-    (flags & flag.bit) >> flag.ordinal == 1
+    (flags & flag.bit) >>> flag.ordinal == 1
 
   def setFlag(flags: Flags, flag: Flag) =
     Word.mask(flags | flag.bit)

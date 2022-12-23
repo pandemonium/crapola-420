@@ -9,16 +9,17 @@ libraryDependencies ++= {
   val os = "macos-arm64"
 
   Seq(
+    "org.scalactic"     %% "scalactic"       % "3.2.14",
+    "org.scalatest"     %% "scalatest"       % "3.2.14"   % "test",
+    "org.scalatestplus" %% "scalacheck-1-17" % "3.2.14.0" % "test",
+  ) ++ Seq(
     "lwjgl",
     "lwjgl-glfw",
     "lwjgl-opengl"
-    // TODO: Add more modules here
-  ).flatMap {
-    module => {
+  ).flatMap { module =>
       Seq(
         "org.lwjgl" % module % version,
         "org.lwjgl" % module % version classifier s"natives-$os"
       )
-    }
   }
 }

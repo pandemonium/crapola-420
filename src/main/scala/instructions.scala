@@ -3,19 +3,19 @@ package cp420
 enum RegisterName:
   case P, Q, R, S
 
-  val address: Address = Address.mask(ordinal.toShort)
+  val address: Address = Address.mask(ordinal)
 
 enum Source:
-  case ImmediateByte(byte: Byte)  /* Not needed. */
+  case ImmediateByte(byte: Word)  /* Not needed. */
   case ImmediateWord(word: Word)
   case Memory(address: Address)
   case Register(register: RegisterName)
-  case RegisterIndirect(page: Byte, offsetRegister: RegisterName)
+  case RegisterIndirect(page: Word, offsetRegister: RegisterName)
 
 enum Target:
   case Memory(address: Address)
   case Register(register: RegisterName)
-  case RegisterIndirect(page: Byte, offsetRegister: RegisterName)
+  case RegisterIndirect(page: Word, offsetRegister: RegisterName)
 
 enum PopOperand:
   case Accumulator
@@ -24,7 +24,7 @@ enum PopOperand:
 enum PushOperand:
   case Accumulator
   case Register(register: RegisterName)
-  case ImmediateByte(byte: Byte)
+  case ImmediateByte(byte: Word)
   case ImmediateWord(word: Word)
 
 enum AluOperand:

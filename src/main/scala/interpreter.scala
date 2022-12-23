@@ -115,7 +115,7 @@ trait AbstractMachine:
     case HCF =>
       setFlag(Flag.Halted)
     case Load(Source.ImmediateByte(data)) =>
-      setAccumulator(Word.mask(data))
+      setAccumulator(data)
     case Load(Source.ImmediateWord(data)) =>
       setAccumulator(data)
     case Load(Source.Memory(address)) =>
@@ -148,7 +148,7 @@ trait AbstractMachine:
     case Push(PushOperand.Register(register)) =>
       setAddress(sp).store(getRegister(register)).push        
     case Push(PushOperand.ImmediateByte(data)) =>
-      setAddress(sp).store(Word.mask(data)).push
+      setAddress(sp).store(data).push
     case Push(PushOperand.ImmediateWord(data)) =>
       setAddress(sp).store(data).push
     case Jump(address) =>
@@ -166,7 +166,7 @@ trait AbstractMachine:
       val returnAddress = Address.computeEffective(page, offset)
       m1.setAddress(returnAddress).jump
     case Compare(Source.ImmediateByte(data)) =>
-      compareAndSetFlags(Word.mask(data))
+      compareAndSetFlags(data)
     case Compare(Source.ImmediateWord(data)) =>
       compareAndSetFlags(data)
     case Compare(Source.Memory(address)) =>

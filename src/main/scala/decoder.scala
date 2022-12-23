@@ -12,7 +12,7 @@ object InstructionDecoder:
   import AbstractInstruction.*
   final val Wide = 12
 
-  enum OpCode(val code: Short):
+  enum OpCode(val code: Int):
     case Halt    extends OpCode(b"000")
     case Load    extends OpCode(b"001")
     case Store   extends OpCode(b"010")
@@ -24,7 +24,7 @@ object InstructionDecoder:
 
   object OpCode:
     def unmask(code: Word) =
-      code & Word.mask(b"111" << 12)
+      code.unmask(b"1110 0000 0000 0000", 13)
 
   def isWide(code: Word): Boolean =
     Word.isSet(Wide, code)
@@ -35,19 +35,19 @@ object InstructionDecoder:
     case OpCode.Load.code if !Word.isSet(11, code) => 
       Load(Source.ImmediateByte(code.lowerByte))
     case OpCode.Load.code if !Word.isSet(10, code) =>
-      val registerAddress = code.unmask(b"000110000000", 8)
+      val registerAddress = code.unmask(b"0001100000000", 8)
       Load(Source.Register(RegisterName.fromOrdinal(registerAddress)))
     case OpCode.Load.code =>
       val registerAddress = code.unmask(b"001100000000", 8)
-      val pageAddress     = code.unmask(b"11111111", 0).toByte
-      Load(Source.RegisterIndirect(pageAddress, RegisterName.fromOrdinal(registerAddress)))
+      val pageAddress     = code.unmask(b"11111111", 0)
+      Load(Source.RegisterIndirect(Word.mask(pageAddress), RegisterName.fromOrdinal(registerAddress)))
     case OpCode.Store.code if !Word.isSet(10, code) =>
       val registerAddress = code.unmask(b"001100000000", 8)
       Store(Target.Register(RegisterName.fromOrdinal(registerAddress)))
     case OpCode.Store.code =>
       val registerAddress = code.unmask(b"001100000000", 8)
-      val pageAddress     = code.unmask(b"11111111", 0).toByte
-      Store(Target.RegisterIndirect(pageAddress, RegisterName.fromOrdinal(registerAddress)))
+      val pageAddress     = code.unmask(b"11111111", 0)
+      Store(Target.RegisterIndirect(Word.mask(pageAddress), RegisterName.fromOrdinal(registerAddress)))
     case OpCode.Alu.code if Word.isSet(7, code) =>
       val registerAddress = code.unmask(b"000001100000", 5)
       val operation = Operator.fromOrdinal(code.unmask(b"111100000000", 8))
@@ -113,7 +113,7 @@ object InstructionDecoder:
         val address = Address.computeEffective(code0.lowerByte, code1)
         Call(address)
       case OpCode.Branch.code =>
-        val address  = code0.lowerByte << 8 | code1.asInt
+        val address  = (code0.lowerByte << Word.mask(8)) | code1.asInt
         val flagMask = code0.unmask(b"11100000000", 8)
         val flag     = Flag.fromBitmask(Word.mask(flagMask))
         Branch(
