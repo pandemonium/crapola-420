@@ -3,6 +3,8 @@ version      := "0.1"
 scalaVersion := "3.2.1"
 javaOptions in run ++= Seq("-XstartOnFirstThread")
 fork in run := true
+scalacOptions ++= Seq("-deprecation", "-feature")
+
 
 libraryDependencies ++= {
   val version = "3.3.1"
