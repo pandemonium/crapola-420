@@ -8,7 +8,7 @@ opaque type Memory   = IArray[Word]
 extension (sc: StringContext)
   /* Only until FromDigits get included. */
   def b(args: Any*): Word =
-    val image = sc.s(args*).replaceAllLiterally(" ", "")
+    val image = sc.s(args*).replace(" ", "")
     Integer.parseInt(image, 2)
 
 object Word:
@@ -95,11 +95,12 @@ object RegisterFile:
 enum Flag:
   case Underflow, Overflow, Zero, Greater, Less, Equal, Halted
 
+  val code = ordinal + 1
   val bit: Word = Word.mask(1 << ordinal)
 
 object Flag:
-  def fromBitmask(word: Word): Flag =
-    fromOrdinal(word.asInt)
+  def fromCode(word: Word): Flag =
+    fromOrdinal(word.asInt - 1)
 
 opaque type Flags = Word
 

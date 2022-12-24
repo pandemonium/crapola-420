@@ -70,45 +70,45 @@ trait AbstractMachine:
       m.setFlag(Flag.Equal).setFlag(Flag.Zero)
     else m.setFlag(Flag.Equal)
 
-  def arithmetic(operation: Operator, data: Word): Machine = operation match
-    case Operator.Add =>
+  def arithmetic(operation: AluOperator, data: Word): Machine = operation match
+    case AluOperator.Add =>
       val result = accumulator + data
       val m = setAccumulator(Word.mask(result))
       if result > Short.MaxValue then m.setFlag(Flag.Overflow)
       else if result < Short.MinValue then m.setFlag(Flag.Underflow)
       else if result == 0 then m.setFlag(Flag.Zero)
       else this
-    case Operator.Subtract =>
+    case AluOperator.Subtract =>
       val result = accumulator - data
       val m = setAccumulator(Word.mask(result))
       if result > Short.MaxValue then m.setFlag(Flag.Overflow)
       else if result < Short.MinValue then m.setFlag(Flag.Underflow)
       else if result == 0 then m.setFlag(Flag.Zero)
       else this
-    case Operator.Multiply =>
+    case AluOperator.Multiply =>
       val result = data * accumulator
       val m = setAccumulator(Word.mask(result))
       // result in: Q:accumulator.
       m.setRegister(RegisterName.Q, Word.upper(result))
-    case Operator.Divide  =>
+    case AluOperator.Divide  =>
       val result = accumulator / data
       val remainder = accumulator % data
       val m = setAccumulator(Word.mask(result))
       // result in: accumulator; remainder in Q.
       m.setRegister(RegisterName.Q, Word.mask(remainder))
-    case Operator.Modulo =>
+    case AluOperator.Modulo =>
       setAccumulator(Word.mask(accumulator % data))
-    case Operator.And =>
+    case AluOperator.And =>
       setAccumulator(Word.mask(accumulator & data))
-    case Operator.Or =>
+    case AluOperator.Or =>
       setAccumulator(Word.mask(accumulator | data))
-    case Operator.Xor =>
+    case AluOperator.Xor =>
       setAccumulator(Word.mask(accumulator ^ data))
-    case Operator.Not =>
+    case AluOperator.Not =>
       setAccumulator(Word.mask(~data))
-    case Operator.Shl =>
+    case AluOperator.Shl =>
       setAccumulator(Word.mask(accumulator << data))
-    case Operator.Shr =>
+    case AluOperator.Shr =>
       setAccumulator(Word.mask(accumulator >> data))
 
   def interpret(instruction: AbstractInstruction): Machine = instruction match
@@ -128,6 +128,8 @@ trait AbstractMachine:
       val address = Address.computeEffective(pageAddress, offset)
       val m = setAddress(address).fetch
       m.setAccumulator(m.bus.data)
+    case Move(target, source) =>
+      setRegister(target, getRegister(source))
     case Store(Target.Memory(address)) =>
       setAddress(address).store(accumulator)
     case Store(Target.Register(register)) =>

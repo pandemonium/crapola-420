@@ -40,6 +40,10 @@ class InstructionDecoderSpec extends AnyFlatSpec
     }
   }
 
+  it should "decode HCF" in {
+    decode(b"0000 0000 0000 0000") should be (HCF)
+  }
+
   it should "decode load immediate word" in {
     forAll { (x: Int) =>
       decodeWide(b"0011 0000 0000 0000", Word.mask(x)) should be (Load(S.ImmediateWord(Word.mask(x))))
@@ -61,6 +65,14 @@ class InstructionDecoderSpec extends AnyFlatSpec
       val encoded = b"0010 1000 0000 0000" | register.ordinal << 8
       decode(Word.mask(encoded)) should be (Load(S.Register(register)))
     }
+  }
+
+  it should "decode a move reg to reg" in {
+    forAll { (targetRegister: RegisterName, sourceRegister: RegisterName) =>
+      val encoded = 
+        b"0010 1000 1000 0000" | targetRegister.ordinal << 8 | sourceRegister.ordinal << 5
+      decode(Word.mask(encoded)) should be (Move(targetRegister, sourceRegister))
+    }    
   }
 
   it should "decode load accumulator from register indirect" in {
@@ -96,6 +108,121 @@ class InstructionDecoderSpec extends AnyFlatSpec
     }
   }
 
-  it should "decode HCF" in {
-    decode(b"0000 0000 0000 0000") should be (HCF)
+  it should "decode ALU with immediate word" in {
+    forAll { (operator: AluOperator, word: Int) =>
+      val encoded = b"0111 0000 0000 0000" | operator.opCode.asInt << 8
+      val data = Word.mask(word)
+      decodeWide(Word.mask(encoded), data) should be (Arithmetic(operator, AluOperand.ImmediateWord(data)))
+    }
+  }
+
+  it should "decode ALU with a register source" in {
+    forAll { (operator: AluOperator, register: RegisterName) =>
+      val encoded = b"0110 0000 1000 0000" | (operator.opCode.asInt << 8) | (register.ordinal << 4)
+      decode(Word.mask(encoded)) should be (Arithmetic(operator, AluOperand.Register(register)))
+    }
+  }
+
+  it should "decode SHL/ SHR with immedaite nibble" in {
+    forAll { (operator: AluOperator, nibble: Int) =>
+      decode(Word.mask(b"0110 1001 0000 0000" | nibble & 0x0F)) should be (Arithmetic(AluOperator.Shl, AluOperand.ImmediateWord(Word.mask(nibble & 0x0F))))
+      decode(Word.mask(b"0110 1010 0000 0000" | nibble & 0x0F)) should be (Arithmetic(AluOperator.Shr, AluOperand.ImmediateWord(Word.mask(nibble & 0x0F))))
+    }
+  }
+
+  it should "decode stack pop to the accumulator" in {
+    decode(Word.mask(b"1000 0000 0000 0000")) should be (Pop(PopOperand.Accumulator))
+  }
+
+  it should "decode stack pop to a register" in {
+    forAll { (register: RegisterName) =>
+      val encoded = b"1000 0100 0000 0000" | register.ordinal << 8
+      decode(Word.mask(encoded)) should be (Pop(PopOperand.Register(register)))
+    }
+  }
+
+  it should "decode a stack push from the accumulator" in {
+    decode(Word.mask(b"1010 0000 0000 0000")) should be (Push(PushOperand.Accumulator))
+  }
+
+  it should "decode a stack push of an immediate byte" in {
+    forAll { (byte: Int) =>
+      val encoded = b"1010 1000 0000 0000" | byte & 0xFF
+      decode(Word.mask(encoded)) should be (Push(PushOperand.ImmediateByte(Word.mask(byte & 0xFF))))
+    }
+  }
+
+  it should "decode a stack push of an immediate word" in {
+    forAll { (word: Int) =>
+      val encoded = b"1010 1100 0000 0000"
+      val data = word & 0xFFFF
+      decodeWide(Word.mask(encoded), Word.mask(data)) should be (Push(PushOperand.ImmediateWord(Word.mask(word & 0xFFFF))))
+    }
+  }
+
+  it should "decode a jump to absolute address" in {
+    forAll { (x: Int) =>
+      val address = x & 0x00FF_FFFF
+      val page = address >>> 16
+      val offset = address & 0x0000FFFF
+      val encoded = b"1101 0000 0000 0000" | page
+
+      decodeWide(Word.mask(encoded), Word.mask(offset)) should be (Jump(Address.mask(address)))
+    }
+  }
+
+  it should "decode a call" in {
+    forAll { (x: Int) =>
+      val address = x & 0x00FF_FFFF
+      val page = address >>> 16
+      val offset = address & 0x0000FFFF
+      val encoded = b"1101 1000 0000 0000" | page
+
+      decodeWide(Word.mask(encoded), Word.mask(offset)) should be (Call(Address.mask(address)))
+    }
+  }
+
+  it should "decode a ret" in {
+    decode(Word.mask(b"1100 1000 0000 0000")) should be (Return)
+  }
+
+  it should "decode a conditional branch" in {
+    forAll { (flag: Flag, x: Int, not: Boolean) =>
+      val address = x & 0x00FF_FFFF
+      val page = address >>> 16
+      val offset = address & 0x0000FFFF
+      val encoded = b"1101 0000 0000 0000" | flag.code << 8 | page | (if not then 1 else 0) << 11
+      val enable = if not then Left(flag) else Right(flag)
+      decodeWide(Word.mask(encoded), Word.mask(offset)) should be (Branch(Address.mask(address), enable))
+    }
+  }
+
+  it should "decode compare with byte" in {
+    forAll { (byte: Int) =>
+      val encoded = b"1110 0000 0000 0000" | byte & 0xFF
+      decode(Word.mask(encoded)) should be (Compare(Source.ImmediateByte(Word.mask(byte & 0xFF))))
+    }
+  }
+
+  it should "decode compare with a word" in {
+    forAll { (word: Int) =>
+      val encoded = b"1110 0000 0000 0000"
+      val data = Word.mask(word & 0xFFFF)
+      decodeWide(Word.mask(encoded), data) should be (Compare(Source.ImmediateWord(data)))
+    }
+  }
+
+  it should "decode compare with a register" in {
+    forAll { (register: RegisterName) =>
+      val encoded = b"1110 1000 0000 0000" | register.ordinal << 8
+      decode(Word.mask(encoded)) should be (Compare(S.Register(register)))
+    }    
+  }
+
+  it should "decode compare with a register indirect" in {
+    forAll { (register: RegisterName, page: Int) =>
+      val pageAddress = page & 0x00FF
+      val encoded = b"1110 1100 0000 0000" | (register.ordinal << 8) | pageAddress
+      decode(Word.mask(encoded)) should be (Compare(S.RegisterIndirect(Word.mask(pageAddress), register)))
+    }
   }

@@ -34,9 +34,13 @@ object InstructionDecoder:
       HCF
     case OpCode.Load.code if !Word.isSet(11, code) => 
       Load(Source.ImmediateByte(code.lowerByte))
-    case OpCode.Load.code if !Word.isSet(10, code) =>
-      val registerAddress = code.unmask(b"0001100000000", 8)
+    case OpCode.Load.code if code.unmask(b"1100 1000 0000", 0) == b"1000 0000 0000" =>
+      val registerAddress = code.unmask(b"001100000000", 8)
       Load(Source.Register(RegisterName.fromOrdinal(registerAddress)))
+    case OpCode.Load.code if code.unmask(b"1100 1000 0000", 0) == b"1000 1000 0000" =>
+      val targetAddress = code.unmask(b"0000 0011 0000 0000", 8)
+      val sourceAddress = code.unmask(b"0000 0000 0110 0000", 5)
+      Move(RegisterName.fromOrdinal(targetAddress), RegisterName.fromOrdinal(sourceAddress))
     case OpCode.Load.code =>
       val registerAddress = code.unmask(b"001100000000", 8)
       val pageAddress     = code.unmask(b"11111111", 0)
@@ -49,15 +53,12 @@ object InstructionDecoder:
       val pageAddress     = code.unmask(b"11111111", 0)
       Store(Target.RegisterIndirect(Word.mask(pageAddress), RegisterName.fromOrdinal(registerAddress)))
     case OpCode.Alu.code if Word.isSet(7, code) =>
-      val registerAddress = code.unmask(b"000001100000", 5)
-      val operation = Operator.fromOrdinal(code.unmask(b"111100000000", 8))
+      val operation = AluOperator.fromOrdinal(code.unmask(b"111100000000", 8))
+      val registerAddress = code.unmask(b"11 0000", 4)
       val register = RegisterName.fromOrdinal(registerAddress)
-      val operand = if Word.isSet(6, code) 
-        then AluOperand.Register(register)
-        else AluOperand.Register(register)
-      Arithmetic(operation, operand)
+      Arithmetic(operation, AluOperand.Register(register))
     case OpCode.Alu.code => /* SH{R|L} Immediate*/
-      val operator = Operator.fromOrdinal(code.unmask(b"111100000000", 8))
+      val operator = AluOperator.fromOrdinal(code.unmask(b"111100000000", 8))
       val data     = Word.mask(code.unmask(b"1111", 0))
       val operand  = AluOperand.ImmediateWord(data)
       Arithmetic(operator, operand)
@@ -74,9 +75,9 @@ object InstructionDecoder:
     case OpCode.Push.code if code.unmask(b"110000000000", 10) == b"10" =>
       val data = code.lowerByte
       Push(PushOperand.ImmediateByte(data))
-    case OpCode.Compare.code if code.unmask(b"1111", 8) == 0 =>
+    case OpCode.Compare.code if code.unmask(b"1111 0000 0000", 8) == b"00" =>
       Compare(Source.ImmediateByte(code.lowerByte))
-    case OpCode.Compare.code if !Word.isSet(10, code) =>
+    case OpCode.Compare.code if code.unmask(b"1111 0000 0000", 10) == b"10" =>
       val registerAddress = code.unmask(b"001100000000", 8)
       Compare(Source.Register(RegisterName.fromOrdinal(registerAddress)))
     case OpCode.Compare.code =>
@@ -101,7 +102,7 @@ object InstructionDecoder:
         val address = Address.computeEffective(code0.lowerByte, code1)
         Store(Target.Memory(address))
       case OpCode.Alu.code =>
-        val operator = Operator.fromOrdinal(code0.unmask(b"111100000000", 8))
+        val operator = AluOperator.fromOrdinal(code0.unmask(b"111100000000", 8))
         val operand = AluOperand.ImmediateWord(code1)
         Arithmetic(operator, operand)
       case OpCode.Push.code =>
@@ -113,14 +114,14 @@ object InstructionDecoder:
         val address = Address.computeEffective(code0.lowerByte, code1)
         Call(address)
       case OpCode.Branch.code =>
-        val address  = (code0.lowerByte << Word.mask(8)) | code1.asInt
+        val address = Address.computeEffective(code0.lowerByte, code1)
         val flagMask = code0.unmask(b"11100000000", 8)
-        val flag     = Flag.fromBitmask(Word.mask(flagMask))
+        val flag     = Flag.fromCode(Word.mask(flagMask))
         Branch(
-          Address.mask(address), 
+          address, 
           if Word.isSet(11, code0)
-          then Right(flag)
-          else Left(flag)
+          then Left(flag)
+          else Right(flag)
         )
       case OpCode.Compare.code if Word.isSet(10, code0) =>
         val address  = Address.computeEffective(code0.lowerByte, code1)
